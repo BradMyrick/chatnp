@@ -1,8 +1,8 @@
 @0xb068ff5fb1c4f77e;
 
 using Go = import "/go.capnp";
-$Go.package("chatnp");
-$Go.import("github.com/BradMyrick/chatnp");
+$Go.package("chat");
+$Go.import("github.com/BradMyrick/chatnp/chat");
 
 struct ChatMessage {
   id @0 :UInt64;

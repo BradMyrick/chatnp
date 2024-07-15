@@ -4,7 +4,7 @@ import (
 	"log"
 	"sort"
 
-	"github.com/BradMyrick/chat"
+	"github.com/BradMyrick/chatnp/chat"
 )
 
 type chatServiceImpl struct {
@@ -35,7 +35,7 @@ func (s *chatServiceImpl) GetMessages(call chat.ChatService_getMessages) error {
 }
 
 func ServerConnect() {
-	server, err := capnp.NewServer(":8000", nil)
+	server, err := chat.NewServer(":8000", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
