@@ -1,65 +1,42 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
+	"context"
 	"log"
-	"os"
-	"strings"
-	"time"
+	"net"
 
-	"capnproto.org/go/capnp/v3"
+	"capnproto.org/go/capnp/v3/rpc"
+	"github.com/BradMyrick/chatnp/server"
 )
 
-
 func main() {
-	clientHook := errorClient{e}
-	conn := capnp.NewClient(capnp.ClientHook{})
-	go func() {
-	  var lastId uint64
-	  for {
-		msgs, err := client.GetMessages(ctx, func(p chat.ChatService_getMessages_Params) error {
-		  return p.SetLastMessageId(lastId)
-		}).Struct()
-		
-		if err != nil {
-		  log.Println("Failed to get messages:", err)
-		  continue
-		}
-		
-		for _, m := range msgs.Messages() {
-		  log.Printf("%s: %s\n", m.Sender(), m.Content())
-		  if m.Id() > lastId {
-			lastId = m.Id()
-		  }
-		}
-		
-		time.Sleep(time.Second)
-	  }
-	}()
-	
-	reader := bufio.NewReader(os.Stdin)
-	for {
-	  fmt.Print("> ")
-	  text, _ := reader.ReadString('\n')
-	  
-	  _, err := client.SendMessage(ctx, func(p chat.ChatService_sendMessage_Params) error {
-		msg, err := p.NewMsg()
-		if err != nil {
-		  return err
-		}
-		
-		msg.SetId(uint64(time.Now().UnixNano()))
-		msg.SetTimestamp(time.Now().Unix())
-		msg.SetSender("user")
-		msg.SetContent(strings.TrimSpace(text))
-		
-		return nil
-	  })
-	  
-	  if err != nil {
-		log.Println("Failed to send message:", err)
-	  }
-	}
-  }
-  
+    client, srv := server.NewServer()
+    defer srv.Shutdown()
+
+    ctx := context.Background()
+
+    log.Println("Starting server...")
+    listener, err := net.Listen("tcp", ":8080")
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer listener.Close()
+
+    for {
+        conn, err := listener.Accept()
+        if err != nil {
+            log.Println("Error accepting connection:", err)
+            continue
+        }
+
+        rpcConn := rpc.NewConn(rpc.NewStreamTransport(conn), nil)
+        go func() {
+            select {
+            case <-rpcConn.Done():
+                client.Release()
+            case <-ctx.Done():
+                _ = rpcConn.Close()
+            }
+        }()
+    }
+}
